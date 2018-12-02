@@ -56,6 +56,9 @@ import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
 
 /**
+ * org.springframework.core.io.support.PathMatchingResourcePatternResolver ，
+ * 为 ResourcePatternResolver 最常用的子类，它除了支持 ResourceLoader 和 ResourcePatternResolver 新增的 "classpath*:" 前缀外，
+ * 还支持 Ant 风格的路径匹配模式（类似于 "**\/*.xml"）
  * A {@link ResourcePatternResolver} implementation that is able to resolve a
  * specified resource location path into one or more matching Resources.
  * The source path may be a simple path which has a one-to-one mapping to a
@@ -277,26 +280,32 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	@Override
 	public Resource[] getResources(String locationPattern) throws IOException {
 		Assert.notNull(locationPattern, "Location pattern must not be null");
+		// 以 "classpath*:" 开头
 		if (locationPattern.startsWith(CLASSPATH_ALL_URL_PREFIX)) {
+			// 路径包含通配符
 			// a class path resource (multiple resources for same name possible)
 			if (getPathMatcher().isPattern(locationPattern.substring(CLASSPATH_ALL_URL_PREFIX.length()))) {
 				// a class path resource pattern
 				return findPathMatchingResources(locationPattern);
 			}
+			// 路径不包含通配符
 			else {
 				// all class path resources with the given name
 				return findAllClassPathResources(locationPattern.substring(CLASSPATH_ALL_URL_PREFIX.length()));
 			}
 		}
+		// 不以 "classpath*:" 开头
 		else {
 			// Generally only look for a pattern after a prefix here,
 			// and on Tomcat only after the "*/" separator for its "war:" protocol.
 			int prefixEnd = (locationPattern.startsWith("war:") ? locationPattern.indexOf("*/") + 1 :
 					locationPattern.indexOf(':') + 1);
+			// 路径包含通配符
 			if (getPathMatcher().isPattern(locationPattern.substring(prefixEnd))) {
 				// a file pattern
 				return findPathMatchingResources(locationPattern);
 			}
+			// 路径不包含通配符
 			else {
 				// a single resource with the given name
 				return new Resource[] {getResourceLoader().getResource(locationPattern)};
@@ -335,11 +344,14 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	protected Set<Resource> doFindAllClassPathResources(String path) throws IOException {
 		Set<Resource> result = new LinkedHashSet<>(16);
 		ClassLoader cl = getClassLoader();
+		// 根据 ClassLoader 加载路径下的所有资源
 		Enumeration<URL> resourceUrls = (cl != null ? cl.getResources(path) : ClassLoader.getSystemResources(path));
 		while (resourceUrls.hasMoreElements()) {
 			URL url = resourceUrls.nextElement();
+			// URL -> UrlResource
 			result.add(convertClassLoaderURL(url));
 		}
+		// 加载路径下得所有 jar 包
 		if ("".equals(path)) {
 			// The above result is likely to be incomplete, i.e. only containing file system references.
 			// We need to have pointers to each of the jar files on the classpath as well...
@@ -488,8 +500,10 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 	 * @see org.springframework.util.PathMatcher
 	 */
 	protected Resource[] findPathMatchingResources(String locationPattern) throws IOException {
+		// 确定根路径、子路径
 		String rootDirPath = determineRootDir(locationPattern);
 		String subPattern = locationPattern.substring(rootDirPath.length());
+		// 获取根据路径下的资源
 		Resource[] rootDirResources = getResources(rootDirPath);
 		Set<Resource> result = new LinkedHashSet<>(16);
 		for (Resource rootDirResource : rootDirResources) {

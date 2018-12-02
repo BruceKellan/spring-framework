@@ -140,6 +140,11 @@ public class DefaultResourceLoader implements ResourceLoader {
 	}
 
 
+	/**
+	 * 该方法里面只会返回ClassPathResource或者UrlResource
+	 * @param location the resource location
+	 * @return
+	 */
 	@Override
 	public Resource getResource(String location) {
 		Assert.notNull(location, "Location must not be null");
